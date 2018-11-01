@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Main where
 
 import Control.Monad.State
@@ -10,29 +12,25 @@ import SkelInstant
 import ParInstant
 import ErrM
 
+getCounter :: State (M.Map String Integer) (Maybe Integer)
+getCounter = gets $ M.lookup "_counter"
 
-data MapEntry = MInteger Integer | MString String
-
-fromMInteger :: Integer -> MapEntry -> Integer
-fromMInteger def (MInteger rInt) = rInt
-fromMInteger def _ = def
-
-fromMString :: String -> MapEntry -> String
-fromMString def (MString rStr) = rStr
-fromMString def _ = def
+-- compileExpr :: Exp -> State (M.Map String Integer) (Integer, String)
+-- compileExpr 
 
 
-compile :: Program -> State (M.Map String MapEntry) String
-compile (Prog []) = do
-    compiled <- gets $ M.lookup "_compiled"
-    let defString = "Error while compiling" 
-    return $ fromMString defString $ fromMaybe (MString "") compiled
-         
-compile (Prog (st:sts)) = do
+callPrint arg = "call void @printInt(i32 %" ++ arg ++ ")\n"
+
+compile :: Program -> String -> State (M.Map String Integer) String
+compile (Prog []) textR = return textR
+
+compile (Prog (st:sts)) textR = do
     case st of
         SAss (Ident id) e -> return "End"
-        SExp e -> return "End"
-    compile (Prog sts)
+        SExp e -> do 
+            Just counter <- getCounter     
+            let textR' = textR ++ (callPrint $ show counter)
+            compile (Prog sts) textR'
 
 
 main = do
@@ -40,5 +38,14 @@ main = do
     let lexed = myLexer input in case pProgram lexed of
         Bad s -> putStrLn "Bad program"
         Ok p -> do
-            let initState = M.insert "_compiled" (MString "a") M.empty
-            print $ evalState (compile p) initState
+            let 
+                initState = M.insert "_counter" 0 M.empty
+                initCode = 
+                    "declare void @printInt(i32)\n\
+                    \define i32 @main() {\n\
+                    \entry:\n"
+                endCode = 
+                    "\tret i32 0\n\
+                    \}\n"
+            putStr $ evalState (compile p initCode) initState
+            putStr endCode
