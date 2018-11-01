@@ -1,0 +1,9 @@
+declare void @printInt(i32)
+define i32 @main() {
+entry:
+	%0 = add i64 3, 4
+	call void @printInt(i32 %0)
+	%1 = add i64 4, 2
+	call void @printInt(i32 %1)
+	ret i32 0
+}
