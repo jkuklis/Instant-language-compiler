@@ -19,12 +19,35 @@ data CompExpr = CompExpr {
     newCounter :: Integer
 }
 
-compileExpr :: Exp -> Integer -> CompExpr
-compileExpr e counter = case e of
+
+data Operation = Add | Sub | Mul | Div
+
+
+compileOper :: (M.Map String Integer) -> Exp -> Exp -> Integer -> Operation -> CompExpr
+compileOper m e1 e2 counter op = 
+    let 
+        cE1 = compileExpr e1 m counter
+        cE2 = compileExpr e2 m $ newCounter cE1
+        nC2 = newCounter cE2
+        oper = case op of
+            Add -> "add"
+            Sub -> "sub"
+            Mul -> "mul"
+            Div -> "sdiv"
+        newAssign = "\t%" ++ (show nC2) ++ " = " ++ oper ++ " i64 " ++ (retValue cE1) ++ ", " ++ (retValue cE2) 
+    in CompExpr{
+        genCode = newAssign : ((genCode cE2) ++ (genCode cE1)),
+        newCounter = nC2 + 1,
+        retValue = "%" ++ (show nC2)
+    }
+
+compileExpr :: Exp -> (M.Map String Integer) -> Integer -> CompExpr
+compileExpr e m counter = case e of
     ExpVar (Ident id) -> 
-        CompExpr{
+        let Just v = M.lookup id m
+        in CompExpr{
             genCode = [],
-            retValue = "%" ++ id,
+            retValue = "%" ++ id ++ "_" ++ (show v),
             newCounter = counter
         }
     ExpLit int ->
@@ -33,35 +56,40 @@ compileExpr e counter = case e of
             retValue = show int,
             newCounter = counter
         }
-    ExpAdd e1 e2 ->
-        let 
-            cE1 = compileExpr e1 counter
-            cE2 = compileExpr e2 $ newCounter cE1
-            nC2 = newCounter cE2
-            newAssign = "\t%" ++ (show nC2) ++ " = add i64 " ++ (retValue cE1) ++ ", " ++ (retValue cE2) 
-        in CompExpr{
-            genCode = newAssign : ((genCode cE1) ++ (genCode cE2)),
-            newCounter = nC2 + 1,
-            retValue = "%" ++ (show nC2)
-        }
+    ExpAdd e1 e2 -> compileOper m e1 e2 counter Add
+    ExpSub e1 e2 -> compileOper m e1 e2 counter Sub
+    ExpMul e1 e2 -> compileOper m e1 e2 counter Mul
+    ExpDiv e1 e2 -> compileOper m e1 e2 counter Div
 
 
 callPrint arg = "\tcall void @printInt(i64 " ++ arg ++ ")"
 
-compile :: Program -> Integer -> [String] -> [String]
-compile (Prog []) counter textR = textR
+compile :: Program -> Integer -> (M.Map String Integer) -> [String] -> [String]
+compile (Prog []) counter m textR = textR
 
-compile (Prog (st:sts)) counter textR = do
+compile (Prog (st:sts)) counter m textR = do
     case st of
-        SAss (Ident id) e -> []
-        SExp e ->  
+        SAss (Ident id) e ->
             let 
-                cE = compileExpr e counter
+                cE = compileExpr e m counter
+                gC = genCode cE
+                nC = newCounter cE
+                rV = retValue cE
+                which = M.lookup id m
+                nWhich = case which of
+                    Just v -> v + 1
+                    Nothing -> 0
+                m' = M.insert id nWhich m
+                textR' = ("\t%" ++ id ++ "_" ++ (show nWhich) ++ " = add i64 0, " ++ rV) : (gC ++ textR)
+            in compile (Prog sts) nC m' textR'
+        SExp e ->
+            let 
+                cE = compileExpr e m counter
                 gC = genCode cE                
                 nC = newCounter cE
                 rV = retValue cE
                 textR' = (callPrint rV) : (gC ++ textR)
-            in compile (Prog sts) nC textR'
+            in compile (Prog sts) nC m textR' 
 
 
 main = do
@@ -78,6 +106,6 @@ main = do
                 endCode = 
                     "\tret i32 0\n\
                     \}"
-                res = unlines $ reverse $ endCode : (compile p 0 [initCode])
+                res = unlines $ reverse $ endCode : (compile p 0 M.empty [initCode])
             writeFile "out.ll" res
             putStr res
