@@ -12,25 +12,45 @@ import SkelInstant
 import ParInstant
 import ErrM
 
-getCounter :: State (M.Map String Integer) (Maybe Integer)
-getCounter = gets $ M.lookup "_counter"
 
--- compileExpr :: Exp -> State (M.Map String Integer) (Integer, String)
--- compileExpr 
+data CompExpr = CompExpr {
+    genCode :: String,
+    retValue :: String,
+    newCounter :: Integer
+}
+
+compileExpr :: Exp -> Integer -> CompExpr
+compileExpr e counter = case e of
+    ExpVar (Ident id) -> 
+        CompExpr{
+            genCode = "",
+            retValue = "%" ++ id,
+            newCounter = counter
+        }
+    ExpLit int ->
+        CompExpr{
+            genCode = "",
+            retValue = show int,
+            newCounter = counter
+        }
+    ExpAdd e1 e2 ->
+        let 
+            cE1 = compileExpr e1 counter
+            cE2 = compileExpr e2 $ newCounter cE1
+        in cE1        
 
 
 callPrint arg = "call void @printInt(i32 %" ++ arg ++ ")\n"
 
-compile :: Program -> String -> State (M.Map String Integer) String
-compile (Prog []) textR = return textR
+compile :: Program -> Integer -> String -> String
+compile (Prog []) counter textR = textR
 
-compile (Prog (st:sts)) textR = do
+compile (Prog (st:sts)) counter textR = do
     case st of
-        SAss (Ident id) e -> return "End"
-        SExp e -> do 
-            Just counter <- getCounter     
+        SAss (Ident id) e -> "End"
+        SExp e -> do    
             let textR' = textR ++ (callPrint $ show counter)
-            compile (Prog sts) textR'
+            compile (Prog sts) counter textR'
 
 
 main = do
@@ -47,5 +67,6 @@ main = do
                 endCode = 
                     "\tret i32 0\n\
                     \}\n"
-            putStr $ evalState (compile p initCode) initState
+            putStr initCode
+            putStr $ compile p 0 ""
             putStr endCode
