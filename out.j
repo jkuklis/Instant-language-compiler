@@ -1,7 +1,15 @@
 .class  public Hello
 .super  java/lang/Object
- 
+
 ; standard initializer
+.method public <init>()V
+	aload_0
+
+	invokenonvirtual java/lang/Object/<init>()V
+	return
+.end method
+
+.method public static main([Ljava/lang/String;)V
 	%a_0 = add i64 0, 3
 	%0 = add i64 3, 4
 	call void @printInt(i64 %0)

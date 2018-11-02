@@ -92,7 +92,46 @@ compile (Prog (st:sts)) counter m textR = do
             in compile (Prog sts) nC m textR' 
 
 
+
+compile2 :: Program -> (M.Map String Integer) -> [String] -> [String]
+
+
+exprSize :: Exp -> Integer
+
+
+
+stackSize :: Program -> Integer -> Integer
+stackSize (Prog []) acc -> acc
+
+stackSize (Prog (st:sts)) acc ->
+
+
 main = do
+    input <- getContents
+    let lexed = myLexer input in case pProgram lexed of
+        Bad s -> putStrLn "Bad program"
+        Ok p -> do
+            let 
+                initState = M.insert "_counter" 0 M.empty
+                initCode = 
+                    ".class  public Hello\n\
+                    \.super  java/lang/Object\n\n\
+                    \; standard initializer\n\
+                    \.method public <init>()V\n\
+                    \\taload_0\n\n\
+                    \\tinvokenonvirtual java/lang/Object/<init>()V\n\
+                    \\treturn\n\
+                    \.end method\n\n\
+                    \.method public static main([Ljava/lang/String;)V"
+                endCode = 
+                    "\treturn\n\
+                    \.end method"
+                res = unlines $ reverse $ endCode : (compile p 0 M.empty [initCode])
+            writeFile "out.j" res
+            putStr res
+
+
+main2 = do
     input <- getContents
     let lexed = myLexer input in case pProgram lexed of
         Bad s -> putStrLn "Bad program"
