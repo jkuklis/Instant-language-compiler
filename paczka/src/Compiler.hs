@@ -17,9 +17,9 @@ import ParInstant
 import ErrM
 
 
-type Exception = String
-
 data Operation = Add | Sub | Mul | Div
+
+data Mode = JVM | LLVM
 
 data ExpLLVM = ExpLLVM {
     genInstr :: [String],
@@ -137,7 +137,7 @@ compileJVM (Prog (st:stmts)) instr = case st of
         compileJVM (Prog stmts) ([storeLine] ++ genInstr ++ instr) 
     SExp e -> do
         let streamLine = "\tgetstatic java/lang/System/out Ljava/io/PrintStream;"
-        let printLine = "\tinvokevirtual java/io/PrintStream/println(I)V" -- long?
+        let printLine = "\tinvokevirtual java/io/PrintStream/println(I)V"
         (genInstr, _) <- asks $ runReader $ compileExpJVM e
         compileJVM (Prog stmts) ([printLine] ++ genInstr ++ [streamLine] ++ instr) 
 
@@ -166,7 +166,7 @@ createFileJVM p locals =
         instrCode = runReader (compileJVM p []) locals
         jasminOut = unlines $ initCode ++ [localsLine, stackLine] ++ (reverse instrCode) ++ endCode
     in do
-        writeFile "out.j" jasminOut
+        writeFile "output/out.j" jasminOut
         putStr jasminOut
 
 
@@ -184,7 +184,7 @@ compileExpLLVM e counter = let
                 Sub -> "sub"
                 Mul -> "mul"
                 Div -> "sdiv"
-        let assignLine = "\t%" ++ (show counter2) ++ " = " ++ oper ++ " i64 " ++ retV1 ++ ", " ++ retV2 
+        let assignLine = "\t%" ++ (show counter2) ++ " = " ++ oper ++ " i32 " ++ retV1 ++ ", " ++ retV2 
         return ExpLLVM{
             genInstr = [assignLine] ++ (genInstr exp2) ++ (genInstr exp1),
             newCounter = counter2 + 1,
@@ -219,14 +219,14 @@ compileLLVM (Prog (st:stmts)) counter instr = case st of
         let nCounter = newCounter expLLVM
         let retV = retVal expLLVM
         Just pos <- gets $ M.lookup id
-        let assignLine = "\t%" ++ id ++ "_" ++ (show (pos + 1)) ++ " = add i64 0, " ++ retV
+        let assignLine = "\t%" ++ id ++ "_" ++ (show (pos + 1)) ++ " = add i32 0, " ++ retV
         modify $ M.insert id (pos + 1)        
         compileLLVM (Prog stmts) nCounter ([assignLine] ++ (genInstr expLLVM) ++ instr)
     SExp e -> do
         expLLVM <- gets $ runReader $ compileExpLLVM e counter
         let nCounter = newCounter expLLVM
         let retV = retVal expLLVM
-        let printLine = "\tcall void @printInt(i64 " ++ retV ++ ")"
+        let printLine = "\tcall void @printInt(i32 " ++ retV ++ ")"
         compileLLVM (Prog stmts) nCounter ([printLine] ++ (genInstr expLLVM) ++ instr)
 
 
@@ -235,7 +235,7 @@ createFileLLVM :: Program -> M.Map String Integer -> IO ()
 createFileLLVM p locals =
     let 
         initCode =
-            ["declare void @printInt(i64)",
+            ["declare void @printInt(i32)",
             "define i32 @main() {",
             "entry:"]
         endCode = 
@@ -244,13 +244,13 @@ createFileLLVM p locals =
         instrCode = evalState (compileLLVM p 0 []) locals
         llOut = unlines $ initCode ++ (reverse instrCode) ++ endCode
     in do
-        writeFile "out.ll" llOut
+        writeFile "output/out.ll" llOut
         putStr llOut
 
 
-processAndCompile :: IO ()
+processAndCompile :: Mode -> IO ()
 
-processAndCompile = do
+processAndCompile mode = do
     input <- getContents
     let tokens = myLexer input in case pProgram tokens of
         Bad error -> do 
@@ -260,16 +260,21 @@ processAndCompile = do
             putStrLn $ show tokens
             exitFailure
         Ok prog -> let 
-            (invalidSt, locals) = runState (getVariables prog 0 []) M.empty
+            (invalidSt, locals) = runState (getVariables prog 1 []) M.empty
             in if null invalidSt 
-            then do
-                createFileJVM prog locals
-                putStrLn ""
-                createFileLLVM prog $ M.map (\x -> 0) locals 
+            then do 
+                case mode of
+                    JVM -> createFileJVM prog locals
+                    LLVM ->createFileLLVM prog $ M.map (\x -> 0) locals
                 exitSuccess
             else do
                 putStrLn "Failure, using undeclared variables:"
                 putStr $ unlines $ reverse invalidSt
                 exitFailure
 
-main = processAndCompile
+main = do
+    args <- getArgs
+    case args of
+        ["JVM"] -> processAndCompile JVM
+        ["LLVM"] -> processAndCompile LLVM
+        _ -> putStrLn "Argument should be mode (JVM/LLVM)."

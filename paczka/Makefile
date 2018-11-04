@@ -15,3 +15,4 @@ rights:
 clean:
 	rm -f instant/*
 	rm -f build/*
+	rm -f output/*
