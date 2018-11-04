@@ -13,8 +13,6 @@ import qualified Data.Set as S
 import Data.Maybe
 
 import AbsInstant
-import LexInstant
-import SkelInstant
 import ParInstant
 import ErrM
 

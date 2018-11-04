@@ -13,8 +13,6 @@ import qualified Data.Set as S
 import Data.Maybe
 
 import AbsInstant
-import LexInstant
-import SkelInstant
 import ParInstant
 import ErrM
 
@@ -68,20 +66,19 @@ getVariables (Prog (st:stmts)) line invalidSt =
 depth :: Exp -> Integer
 
 depth e = let 
-    depth_h e1 e2 = let
+    depth_h e1 e2 swap = let
         d1 = depth e1
         d2 = depth e2
-        inc = if d1 == d2
-            then 1
-            else 0
-        in (max d1 d2) + inc
-    in case e of   
+        in if swap
+            then (max d1 d2) + (if d1 == d2 then 1 else 0)
+            else (max d1 d2) + (if d1 <= d2 then 1 else 0)
+    in case e of
     (ExpLit _) -> 1
     (ExpVar _) -> 1
-    (ExpAdd e1 e2) -> depth_h e1 e2
-    (ExpSub e1 e2) -> depth_h e1 e2
-    (ExpMul e1 e2) -> depth_h e1 e2
-    (ExpDiv e1 e2) -> depth_h e1 e2
+    (ExpAdd e1 e2) -> depth_h e1 e2 True
+    (ExpSub e1 e2) -> depth_h e1 e2 False
+    (ExpMul e1 e2) -> depth_h e1 e2 True
+    (ExpDiv e1 e2) -> depth_h e1 e2 False
 
 
 calcMaxDepth :: Program -> Integer
@@ -105,11 +102,11 @@ compileExpJVM e = let
                 Div -> "\tidiv"
             addAndMulCase = if count2 > count1
                 then (genInstr1 ++ genInstr2, count2)
-                else (genInstr2 ++ genInstr1, count2 + (if count1 == count2 then 1 else 0))
+                else (genInstr2 ++ genInstr1, count1 + (if count1 == count2 then 1 else 0))
             (instr, count) = case op of
                 Add -> addAndMulCase
                 Mul -> addAndMulCase
-                _ -> (genInstr2 ++ genInstr1, count2 + (if count1 <= count2 then 1 else 0)) 
+                _ -> (genInstr2 ++ genInstr1, (max count1 count2) + (if count1 <= count2 then 1 else 0)) 
         return (operLine : instr, count)
     in case e of
     ExpLit int
