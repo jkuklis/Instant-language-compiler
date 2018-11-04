@@ -12,7 +12,7 @@
 .end method
 
 .method public static main([Ljava/lang/String;)V
-.limit stack 5
+.limit stack 2
 	getstatic java/lang/System/out Ljava/io/PrintStream;
 	ldc "Hello"
 	invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V

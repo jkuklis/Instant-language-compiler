@@ -1,7 +1,6 @@
-.class  public Hello
-.super  java/lang/Object
- 
-; standard initializer
+declare void @printInt(i64)
+define i32 @main() {
+entry:
 	%a_0 = add i64 0, 3
 	%0 = add i64 3, 4
 	call void @printInt(i64 %0)
@@ -20,5 +19,7 @@
 	%9 = add i64 %a_2, %8
 	%a_3 = add i64 0, %9
 	call void @printInt(i64 %a_3)
-	return
-.end method
+	%10 = add i64 %a_3, 3
+	%b_0 = add i64 0, %10
+	ret i32 0
+}
