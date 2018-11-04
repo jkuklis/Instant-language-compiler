@@ -2,6 +2,7 @@
 
 module Main where
 
+import System.Environment ( getArgs )
 import System.Exit ( exitFailure, exitSuccess )
 
 import Control.Monad.State
