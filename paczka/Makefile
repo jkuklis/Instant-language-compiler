@@ -1,4 +1,4 @@
-all: clean instantM compiler2 rights	
+all: clean instantM compiler rights	
 
 instantM:
 	bnfc -o instant -m src/Instant.cf

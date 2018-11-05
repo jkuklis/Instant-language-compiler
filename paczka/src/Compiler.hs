@@ -28,6 +28,7 @@ data ExpLLVM = ExpLLVM {
     newCounter :: Integer
 }
 
+
 invalidVars :: Exp -> M.Map String Integer -> S.Set String
 
 invalidVars e m = let 
@@ -168,7 +169,7 @@ createFileJVM p locals fileName =
     in unlines $ initCode ++ [localsLine, stackLine] ++ (reverse instrCode) ++ endCode
 
 
-compileExpLLVM :: Exp -> Integer -> Reader (M.Map String Integer) ExpLLVM
+compileExpLLVM :: Exp -> Integer -> Reader (M.Map String String) ExpLLVM
 
 compileExpLLVM e counter = let
     cExpLLVM_h e1 e2 counter op = do
@@ -199,7 +200,7 @@ compileExpLLVM e counter = let
         Just pos <- asks $ M.lookup id
         return ExpLLVM{
             genInstr = [],
-            retVal = "%" ++ id ++ "_" ++ (show pos),
+            retVal = pos,
             newCounter = counter
         }
     ExpAdd e1 e2 -> cExpLLVM_h e1 e2 counter Add
@@ -208,7 +209,7 @@ compileExpLLVM e counter = let
     ExpDiv e1 e2 -> cExpLLVM_h e1 e2 counter Div
 
 
-compileLLVM :: Program -> Integer -> [String] -> State (M.Map String Integer) [String]
+compileLLVM :: Program -> Integer -> [String] -> State (M.Map String String) [String]
 
 compileLLVM (Prog []) _ instr = return instr
 compileLLVM (Prog (st:stmts)) counter instr = case st of
@@ -216,19 +217,17 @@ compileLLVM (Prog (st:stmts)) counter instr = case st of
         expLLVM <- gets $ runReader $ compileExpLLVM e counter
         let nCounter = newCounter expLLVM
         let retV = retVal expLLVM
-        Just pos <- gets $ M.lookup id
-        let assignLine = "\t%" ++ id ++ "_" ++ (show (pos + 1)) ++ " = add i32 0, " ++ retV
-        modify $ M.insert id (pos + 1)        
-        compileLLVM (Prog stmts) nCounter ([assignLine] ++ (genInstr expLLVM) ++ instr)
+        modify $ M.insert id retV      
+        compileLLVM (Prog stmts) nCounter $ (genInstr expLLVM) ++ instr
     SExp e -> do
         expLLVM <- gets $ runReader $ compileExpLLVM e counter
         let nCounter = newCounter expLLVM
         let retV = retVal expLLVM
         let printLine = "\tcall void @printInt(i32 " ++ retV ++ ")"
-        compileLLVM (Prog stmts) nCounter ([printLine] ++ (genInstr expLLVM) ++ instr)
+        compileLLVM (Prog stmts) nCounter $ [printLine] ++ (genInstr expLLVM) ++ instr
 
 
-createFileLLVM :: Program -> M.Map String Integer -> String
+createFileLLVM :: Program -> M.Map String String -> String
 
 createFileLLVM p locals =
     let 
@@ -261,7 +260,7 @@ processAndCompile mode fileName debug = do
                 let 
                     out = case mode of
                         JVM -> createFileJVM prog locals fileName
-                        LLVM -> createFileLLVM prog $ M.map (\x -> 0) locals
+                        LLVM -> createFileLLVM prog $ M.map (\x -> "0") locals
                     outFile = case mode of
                         JVM -> "output/out.j"
                         LLVM -> "output/out.ll"
