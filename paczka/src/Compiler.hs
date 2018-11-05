@@ -66,13 +66,11 @@ getVariables (Prog (st:stmts)) line invalidSt =
 
 depth :: Exp -> Integer
 
-depth e = let 
+depth e = let
     depth_h e1 e2 swap = let
         d1 = depth e1
         d2 = depth e2
-        in if swap
-            then (max d1 d2) + (if d1 == d2 then 1 else 0)
-            else (max d1 d2) + (if d1 <= d2 then 1 else 0)
+        in (max d1 d2) + (if d1 == d2 then 1 else 0)
     in case e of
     (ExpLit _) -> 1
     (ExpVar _) -> 1
@@ -101,14 +99,16 @@ compileExpJVM e = let
                 Sub -> "\tisub"
                 Mul -> "\timul"
                 Div -> "\tidiv"
-            addAndMulCase = if count2 > count1
+            (instr, count) = if count2 > count1
                 then (genInstr1 ++ genInstr2, count2)
                 else (genInstr2 ++ genInstr1, count1 + (if count1 == count2 then 1 else 0))
-            (instr, count) = case op of
-                Add -> addAndMulCase
-                Mul -> addAndMulCase
-                _ -> (genInstr2 ++ genInstr1, (max count1 count2) + (if count1 <= count2 then 1 else 0)) 
-        return (operLine : instr, count)
+            swapLine = case op of
+                Add -> []
+                Mul -> []
+                _ -> if count2 > count1
+                    then ["\tswap"]
+                    else []
+        return ([operLine] ++ swapLine ++ instr, count)
     in case e of
     ExpLit int
         | int == -1 -> return (["\ticonst_m1"], 1)
@@ -143,12 +143,12 @@ compileJVM (Prog (st:stmts)) instr = case st of
         compileJVM (Prog stmts) ([printLine] ++ genInstr ++ [streamLine] ++ instr) 
 
 
-createFileJVM :: Program -> M.Map String Integer -> IO ()
+createFileJVM :: Program -> M.Map String Integer -> String -> String
 
-createFileJVM p locals =
+createFileJVM p locals fileName =
     let
         initCode =
-            [".class  public Main",
+            [".class public " ++ fileName,
             ".super java/lang/Object\n",
             "; standard initializer",
             ".method public <init>()V",
@@ -165,10 +165,7 @@ createFileJVM p locals =
         stackLimit = (calcMaxDepth p) + 1
         stackLine = ".limit stack " ++ (show stackLimit)
         instrCode = runReader (compileJVM p []) locals
-        jasminOut = unlines $ initCode ++ [localsLine, stackLine] ++ (reverse instrCode) ++ endCode
-    in do
-        writeFile "output/out.j" jasminOut
-        putStr jasminOut
+    in unlines $ initCode ++ [localsLine, stackLine] ++ (reverse instrCode) ++ endCode
 
 
 compileExpLLVM :: Exp -> Integer -> Reader (M.Map String Integer) ExpLLVM
@@ -231,7 +228,7 @@ compileLLVM (Prog (st:stmts)) counter instr = case st of
         compileLLVM (Prog stmts) nCounter ([printLine] ++ (genInstr expLLVM) ++ instr)
 
 
-createFileLLVM :: Program -> M.Map String Integer -> IO ()
+createFileLLVM :: Program -> M.Map String Integer -> String
 
 createFileLLVM p locals =
     let 
@@ -243,15 +240,12 @@ createFileLLVM p locals =
             ["\tret i32 0",
             "}"]
         instrCode = evalState (compileLLVM p 0 []) locals
-        llOut = unlines $ initCode ++ (reverse instrCode) ++ endCode
-    in do
-        writeFile "output/out.ll" llOut
-        putStr llOut
+    in unlines $ initCode ++ (reverse instrCode) ++ endCode
 
 
-processAndCompile :: Mode -> IO ()
+processAndCompile :: Mode -> String -> Bool -> IO ()
 
-processAndCompile mode = do
+processAndCompile mode fileName debug = do
     input <- getContents
     let tokens = myLexer input in case pProgram tokens of
         Bad error -> do 
@@ -263,10 +257,16 @@ processAndCompile mode = do
         Ok prog -> let 
             (invalidSt, locals) = runState (getVariables prog 1 []) M.empty
             in if null invalidSt 
-            then do 
-                case mode of
-                    JVM -> createFileJVM prog locals
-                    LLVM ->createFileLLVM prog $ M.map (\x -> 0) locals
+            then do
+                let 
+                    out = case mode of
+                        JVM -> createFileJVM prog locals fileName
+                        LLVM -> createFileLLVM prog $ M.map (\x -> 0) locals
+                    outFile = case mode of
+                        JVM -> "output/out.j"
+                        LLVM -> "output/out.ll"
+                writeFile outFile out
+                when debug $ putStr out
                 exitSuccess
             else do
                 putStrLn "Failure, using undeclared variables:"
@@ -276,6 +276,6 @@ processAndCompile mode = do
 main = do
     args <- getArgs
     case args of
-        ["JVM"] -> processAndCompile JVM
-        ["LLVM"] -> processAndCompile LLVM
-        _ -> putStrLn "Argument should be mode (JVM/LLVM)."
+        "JVM":fileName:tail -> processAndCompile JVM fileName $ not $ null tail
+        "LLVM":fileName:tail -> processAndCompile LLVM fileName $ not $ null tail
+        _ -> putStrLn "Arguments should be mode (JVM/LLVM), fileName, (optional) debug."

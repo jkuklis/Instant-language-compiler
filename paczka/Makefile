@@ -1,4 +1,4 @@
-all: clean instantM compiler rights	
+all: clean instantM compiler2 rights	
 
 instantM:
 	bnfc -o instant -m src/Instant.cf
@@ -6,6 +6,10 @@ instantM:
 
 compiler:
 	ghc -o build/Compiler -odir build src/Compiler.hs -iinstant
+	mv src/Compiler.hi build/Compiler.hi
+
+compiler2:
+	ghc -o build/Compiler -odir build src/Compiler2.hs -iinstant
 	mv src/Compiler.hi build/Compiler.hi
 
 rights:

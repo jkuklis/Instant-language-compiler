@@ -1,0 +1,17 @@
+#!/bin/bash
+
+filePath=$1
+
+fileDir=$(dirname "${filePath}")
+
+fileNameExt=$(basename "${filePath}")
+
+fileName="${fileNameExt%.*}"
+
+build/Compiler LLVM $fileName < $filePath
+
+cp output/out.ll $fileDir/$fileName.ll
+
+llvm-as -o output/out.bc output/out.ll
+
+llvm-link -o $fileDir/$fileName.bc output/out.bc llvm_runtime/runtime.bc
