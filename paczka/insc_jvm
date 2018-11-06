@@ -8,8 +8,8 @@ fileNameExt=$(basename "${filePath}")
 
 fileName="${fileNameExt%.*}"
 
-build/Compiler JVM $fileName < $filePath
+build/Compiler JVM $fileDir $fileName < $filePath
 
-cp output/out.j $fileDir/$fileName.j
+jFile = $fileDir/$fileName.j
 
-java -jar jasmin/jasmin.jar $fileDir/$fileName.j -d $fileDir
+java -jar jasmin/jasmin.jar $jFile -d $fileDir
