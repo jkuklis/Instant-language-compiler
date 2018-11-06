@@ -36,10 +36,9 @@ compile fileDir fileName vm = do
                 putStrLn "Failure, using undeclared variables:"                
                 putStr errors
 
-
 main = do
     args <- getArgs
     case args of
         ["LLVM", fileDir, fileName] -> compile fileDir fileName LLVM
         ["JVM", fileDir, fileName] -> compile fileDir fileName JVM
-        _ -> putStrLn "Two arguments expected: [LLVM/JVM] fileName"
+        _ -> putStrLn "Three arguments expected: [LLVM/JVM] fileDir fileName"

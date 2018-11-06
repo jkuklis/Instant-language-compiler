@@ -5,13 +5,14 @@ instantM:
 	make -C instant
 
 compiler:
-	ghc -o build/Compiler -odir build src/Main.hs -iinstant
-	mv src/Compiler.hi build/Compiler.hi
+	ghc src/Main.hs -o build/Compiler -odir build -isrc -iinstant
+	mv src/*.hi build
+	cd -
 
 rights:
 	chmod +x insc_jvm
 	chmod +x insc_llvm
-
+	
 clean:
 	rm -f instant/*
 	rm -f build/*

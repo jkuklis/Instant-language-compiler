@@ -4,16 +4,26 @@ filePath=$1
 
 fileDir=$(dirname "${filePath}")
 
+if [ -z "$fileDir" ]; then
+    
+    fileDir = "."
+
+fi
+
 fileNameExt=$(basename "${filePath}")
 
 fileName="${fileNameExt%.*}"
 
 build/Compiler LLVM $fileDir $fileName < $filePath
 
-llFile = $fileDir/$fileName.ll
+llFile=$fileDir/$fileName.ll
 
-bcFile = $fileDir/$fileName.bc
+bcFile=$fileDir/$fileName.bc
 
-llvm-as -o $bcFile $llFile
+if [ -f $llFile ]; then
 
-llvm-link -o $bcFile $bcFile llvm_runtime/runtime.bc
+    llvm-as -o $bcFile $llFile
+
+    llvm-link -o $bcFile $bcFile llvm_runtime/runtime.bc
+
+fi

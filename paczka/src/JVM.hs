@@ -195,9 +195,9 @@ compileJVM :: Program -> [String] -> String -> String
 
 compileJVM prog locals fileName =
     let
-        firstLine = ".class public " ++ fileName
-        localsLine = ".limit locals " ++ (show (length locals))
+        firstLine = ".class public " ++ fileName ++ "\n"
+        localsLine = ".limit locals " ++ (show (length locals)) ++ "\n"
         start = startState $ mapToConsequent locals
         (instr, maxD) = evalState (runCodegen (compile prog)) start
-        stackLine = ".limit stack " ++ (show maxD)
+        stackLine = ".limit stack " ++ (show maxD) ++ "\n"
     in firstLine ++ beginFile ++ localsLine ++ stackLine ++ instr ++ endFile

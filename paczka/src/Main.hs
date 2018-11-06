@@ -15,9 +15,9 @@ import LocalsGatherer (getLocals)
 data VM = LLVM | JVM
 
 
-compile :: String -> VM -> IO ()
+compile :: String -> String -> VM -> IO ()
 
-compile fileName vm = do
+compile fileDir fileName vm = do
     input <- getContents
     let tokens = myLexer input in case pProgram tokens of
         Bad error -> do 
@@ -28,15 +28,18 @@ compile fileName vm = do
                 out = case vm of
                     LLVM -> compileLLVM prog locals
                     JVM -> compileJVM prog locals fileName
-                in writeFile fileName out
+                ext = case vm of
+                    LLVM -> ".ll"
+                    JVM -> ".j"
+                in do
+                    writeFile (fileDir ++ "/" ++ fileName ++ ext) out
             Left errors -> do
                 putStrLn "Failure, using undeclared variables:"                
                 putStr errors
 
-
 main = do
     args <- getArgs
     case args of
-        ["LLVM", fileName] -> compile fileName LLVM
-        ["JVM", fileName] -> compile fileName JVM
-        _ -> putStrLn "Two arguments expected: [LLVM/JVM] fileName"
+        ["LLVM", fileDir, fileName] -> compile fileDir fileName LLVM
+        ["JVM", fileDir, fileName] -> compile fileDir fileName JVM
+        _ -> putStrLn "Three arguments expected: [LLVM/JVM] fileDir fileName"

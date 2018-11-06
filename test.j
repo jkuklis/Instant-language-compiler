@@ -1,5 +1,4 @@
-.class public test
-.super java/lang/Object
+.class public test.super java/lang/Object
 
 ; standard initializer
 .method public <init>()V
@@ -10,9 +9,7 @@
 .end method
 
 .method public static main([Ljava/lang/String;)V
-.limit locals 3
-.limit stack 4
-	iconst_3
+.limit locals 2.limit stack 3	iconst_3
 	istore_0
 	getstatic java/lang/System/out Ljava/io/PrintStream;
 	iconst_3
