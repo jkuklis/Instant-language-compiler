@@ -2,8 +2,6 @@
 
 module Main where
 
-import System.Environment ( getArgs )
-import System.Exit ( exitFailure, exitSuccess )
 
 import Control.Monad.State
 import Control.Monad.Except
@@ -278,3 +276,5 @@ main = do
         "JVM":fileName:tail -> processAndCompile JVM fileName $ not $ null tail
         "LLVM":fileName:tail -> processAndCompile LLVM fileName $ not $ null tail
         _ -> putStrLn "Arguments should be mode (JVM/LLVM), fileName, (optional) debug."
+import System.Environment ( getArgs )
+import System.Exit ( exitFailure, exitSuccess )

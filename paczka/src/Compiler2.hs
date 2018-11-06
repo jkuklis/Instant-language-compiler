@@ -277,7 +277,6 @@ createFileLLVM p locals =
 
 
 processAndCompile :: Mode -> String -> Bool -> IO ()
-
 processAndCompile mode fileName debug = do
     input <- getContents
     let tokens = myLexer input in case pProgram tokens of
