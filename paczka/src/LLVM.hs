@@ -7,6 +7,10 @@ import Control.Monad.State
 
 import AbsInstant
 
+
+data Operation = Add | Sub | Mul | Div
+
+
 data CodegenState = CodegenState {
     counter :: Integer,
     genCode :: [String]
@@ -17,14 +21,9 @@ newtype Codegen a = Codegen { runCodegen :: State CodegenState a }
   deriving (Functor, Applicative, Monad, MonadState CodegenState )
 
 
-appendLines :: [String] -> CodegenState -> CodegenState
-
-appendLines lines state = state { genCode = lines ++ (genCode state) }
-
-
 appendLine :: String -> CodegenState -> CodegenState
 
-appendLine line = appendLines [line]
+appendLine line state = state { genCode = line : (genCode state) }
 
 
 getCounter :: Codegen Integer
@@ -56,15 +55,27 @@ emitPrint val =
     in modify $ appendLine printLine
 
 
-emitOp :: Exp -> Exp -> String -> Codegen String
+emitOp :: String -> String -> Operation -> Codegen String
 
-emitOp e1 e2 oper = do
-    v1 <- compileExp e1
-    v2 <- compileExp e2
+emitOp v1 v2 op = do
     count <- getCounter
+    let 
+        oper = case op of
+            Add -> "add"
+            Sub -> "sub"
+            Mul -> "mul"
+            Div -> "sdiv"
     let operLine = "%" ++ (show count) ++ " = " ++ oper ++ " i32 " ++ v1 ++ ", " ++ v2
     modify $ appendLine operLine
     return $ "%" ++ (show count)
+
+
+compileOp :: Exp -> Exp -> Operation -> Codegen String
+
+compileOp e1 e2 op = do
+    v1 <- compileExp e1
+    v2 <- compileExp e2
+    emitOp v1 v2 op
 
 
 compileExp :: Exp -> Codegen String
@@ -75,17 +86,17 @@ compileExp e = case e of
         count <- getCounter
         emitLoad id count
         return $ "%" ++ (show count)
-    ExpAdd e1 e2 -> emitOp e1 e2 "add"
-    ExpSub e1 e2 -> emitOp e1 e2 "sub"
-    ExpMul e1 e2 -> emitOp e1 e2 "mul"
-    ExpDiv e1 e2 -> emitOp e1 e2 "sdiv"
+    ExpAdd e1 e2 -> compileOp e1 e2 Add
+    ExpSub e1 e2 -> compileOp e1 e2 Sub
+    ExpMul e1 e2 -> compileOp e1 e2 Mul
+    ExpDiv e1 e2 -> compileOp e1 e2 Div
 
 
 compile :: Program -> Codegen String
 
 compile (Prog []) = do
-    compiledProg <- gets genCode
-    return $ unlines $ reverse $ map (\x -> "\t" ++ x) compiledProg
+    instr <- gets genCode
+    return $ unlines $ reverse $ map (\x -> "\t" ++ x) instr
 
 compile (Prog (st:stmts)) = case st of
     SAss (Ident id) e -> do
@@ -96,6 +107,10 @@ compile (Prog (st:stmts)) = case st of
         retVal <- compileExp e
         emitPrint retVal
         compile $ Prog stmts
+
+
+allocate :: [String] -> String
+allocate locals = unlines $ map (\x -> "%" ++ x ++ " = alloca i32") locals
 
 
 startState = CodegenState {
@@ -113,8 +128,10 @@ fileEnd = unlines
     "}"]
 
 
-compileLLVM :: Program -> String
+compileLLVM :: Program -> [String] -> String
 
-compileLLVM prog =
-    let instr = evalState (runCodegen (compile prog)) startState
-    in fileBegin ++ instr ++ fileEnd
+compileLLVM prog locals =
+    let
+        alloca = allocate locals
+        instr = evalState (runCodegen (compile prog)) startState
+    in fileBegin ++ alloca ++ instr ++ fileEnd

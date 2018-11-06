@@ -104,15 +104,10 @@ gatherLocals (Prog (st:stmts)) = case st of
         gatherLocals $ Prog stmts
           
 
-getLocals :: Program -> Either String [(String, Integer)]
+getLocals :: Program -> Either String [String]
 
 getLocals prog =
     let (frequencies, errors) = evalState (runLocalsGen (gatherLocals prog)) startState
     in if null errors
-        then 
-            let 
-                sortedVars = map fst $ reverse $ L.sortOn snd frequencies
-                enumeration = map toInteger [0..(length sortedVars - 1)]
-                locals = zip sortedVars enumeration
-            in Right locals
+        then Right $ map fst $ reverse $ L.sortOn snd frequencies
         else Left $ unlines $ reverse $ errors

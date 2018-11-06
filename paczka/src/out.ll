@@ -1,6 +1,8 @@
 declare void @printInt(i32)
 define i32 @main() {
 entry:
+%a = alloca i32
+%b = alloca i32
 	store i32 3, i32* %a
 	%0 = add i32 3, 4
 	call void @printInt(i32 %0)

@@ -26,8 +26,8 @@ compile fileName vm = do
         Ok prog -> case getLocals prog of
             Right locals -> let 
                 out = case vm of
-                    LLVM -> compileLLVM prog
-                    JVM -> compileJVM prog
+                    LLVM -> compileLLVM prog locals
+                    JVM -> compileJVM prog locals fileName
                 in writeFile fileName out
             Left errors -> do
                 putStrLn "Failure, using undeclared variables:"                
