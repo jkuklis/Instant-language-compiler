@@ -6,7 +6,7 @@ import Shelly
 import Prelude hiding(FilePath,unwords)
 import System.Environment
 import qualified Data.Text as LT
-import Data.Text(Text)
+import Data.Text(Text, unpack)
 import Data.String(IsString,fromString)
 import Control.Monad(forM)
 import qualified Filesystem.Path.CurrentOS as FP    
@@ -42,6 +42,8 @@ tester projectDir testDir = shelly $ verbosely $ do
   (opts, archive) <- findArchive 
   inspect archive
   tar opts archive
+  p <- pwd
+  echo $ toTextIgnore p
   test_f "Makefile" `orDie` "No Makefile"
   run_ "make" []
   test_f "insc_jvm" `orDie` "insc_jvm executable not found"

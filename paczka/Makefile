@@ -1,13 +1,14 @@
 all: clean instantM compiler rights	
 
 instantM:
-	bnfc -o instant -m src/Instant.cf
-	make -C instant
+	cd instant
+	bnfc -m Instant.cf
+	make
+	cd -
 
 compiler:
 	ghc src/Main.hs -o build/Compiler -odir build -isrc -iinstant
 	mv src/*.hi build
-	cd -
 
 rights:
 	chmod +x insc_jvm
