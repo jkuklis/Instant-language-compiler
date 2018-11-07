@@ -3,7 +3,6 @@
 
 module LocalsGatherer where
 
-
 import qualified Data.Map as M
 import qualified Data.List as L
 
@@ -15,6 +14,9 @@ import Data.Either
 import AbsInstant
 
 
+-- counter is for statement enumeration
+-- varsFrequency counts variable occurrences
+-- errors is a list of error messages for statements using undeclared variables
 data LocalsState = LocalsState {
     counter :: Integer,
     varsFrequency :: M.Map String Integer,
@@ -43,6 +45,8 @@ setFreq :: String -> Integer -> LocalsGen ()
 setFreq id freq = modify $ \s -> s { varsFrequency = M.insert id freq (varsFrequency s) }
 
 
+-- updates frequencies and returns a list of variables
+-- that were used but were not declared yet
 undeclVars :: Exp -> LocalsGen [String]
 
 undeclVars e =
@@ -71,7 +75,7 @@ addError :: [String] -> LocalsGen ()
 
 addError undeclVars = do
     count <- gets counter
-    let error = "Line " ++ (show count) ++ ": " ++ (unwords (map (\x -> x ++ " ") undeclVars))
+    let error = "Statement " ++ (show count) ++ ": " ++ (unwords (map (\x -> x ++ " ") undeclVars))
     modify $ \s -> s { errors = error : (errors s) }
 
 
@@ -109,5 +113,7 @@ getLocals :: Program -> Either String [String]
 getLocals prog =
     let (frequencies, errors) = evalState (runLocalsGen (gatherLocals prog)) startState
     in if null errors
+        -- sort variables according to their occurrences count
+        -- (could be useful for JVM, we want to use shorter load_<n> instructions more often)
         then Right $ map fst $ reverse $ L.sortBy (\(_,a) (_,b) -> compare a b) frequencies
         else Left $ unlines $ reverse $ errors

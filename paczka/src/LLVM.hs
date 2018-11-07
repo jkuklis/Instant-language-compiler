@@ -70,6 +70,10 @@ emitOp v1 v2 op = do
     return $ "%" ++ (show count)
 
 
+allocate :: [String] -> String
+allocate locals = unlines $ map (\x -> "\t%" ++ x ++ " = alloca i32") locals
+
+
 compileOp :: Exp -> Exp -> Operation -> Codegen String
 
 compileOp e1 e2 op = do
@@ -107,10 +111,6 @@ compile (Prog (st:stmts)) = case st of
         retVal <- compileExp e
         emitPrint retVal
         compile $ Prog stmts
-
-
-allocate :: [String] -> String
-allocate locals = unlines $ map (\x -> "\t%" ++ x ++ " = alloca i32") locals
 
 
 startState = CodegenState {

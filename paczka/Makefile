@@ -1,4 +1,4 @@
-all: clean instantM compiler rights	
+all: instantM compiler rights	
 
 instantM:
 	cp src/Instant.cf instant/Instant.cf
