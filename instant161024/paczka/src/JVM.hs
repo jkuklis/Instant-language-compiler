@@ -13,12 +13,15 @@ import AbsInstant
 data Operation = Add | Sub | Mul | Div
 
 
+-- Exp extended by subexpressions' depths for operation expressions
+-- the first Integer is the depth of the first subexpression
 data DExp
     = DExpLit Integer
     | DExpVar String
     | DExpOp DExp DExp Integer Integer Operation
-    
-
+  
+  
+-- local is a mapping from variable names to corresponding store position
 data CodegenState = CodegenState {
     genCode :: [String],
     local :: M.Map String Integer,
@@ -200,6 +203,6 @@ compileJVM prog locals fileName =
         localsLine = ".limit locals " ++ (show localsCount) ++ "\n"
         start = startState $ mapToConsequent locals
         (instr, maxD) = evalState (runCodegen (compile prog)) start
-        stackDepth = maxD + 1
+        stackDepth = maxD + 1 -- for Stream on stack
         stackLine = ".limit stack " ++ (show stackDepth) ++ "\n"
     in firstLine ++ beginFile ++ localsLine ++ stackLine ++ instr ++ endFile
