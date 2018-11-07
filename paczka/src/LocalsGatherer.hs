@@ -25,7 +25,7 @@ data LocalsState = LocalsState {
 
 
 newtype LocalsGen a = LocalsGen { runLocalsGen :: State LocalsState a }
-  deriving (Functor, Applicative, Monad, MonadState LocalsState )
+  deriving (Monad, MonadState LocalsState )
 
 
 startState = LocalsState {

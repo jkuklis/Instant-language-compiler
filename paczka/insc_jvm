@@ -20,6 +20,6 @@ jFile=$fileDir/$fileName.j
 
 if [ -f $jFile ]; then
    
-    java -jar jasmin/jasmin.jar $jFile -d $fileDir
+    java -jar lib/jasmin.jar $jFile -d $fileDir
 
 fi

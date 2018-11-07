@@ -18,7 +18,7 @@ data CodegenState = CodegenState {
 
 
 newtype Codegen a = Codegen { runCodegen :: State CodegenState a }
-  deriving (Functor, Applicative, Monad, MonadState CodegenState )
+  deriving (Monad, MonadState CodegenState )
 
 
 appendLine :: String -> CodegenState -> CodegenState

@@ -30,7 +30,7 @@ data CodegenState = CodegenState {
 
 
 newtype Codegen a = Codegen { runCodegen :: State CodegenState a }
-  deriving (Functor, Applicative, Monad, MonadState CodegenState )
+  deriving (Monad, MonadState CodegenState )
 
 
 appendLine :: String -> CodegenState -> CodegenState
@@ -203,6 +203,6 @@ compileJVM prog locals fileName =
         localsLine = ".limit locals " ++ (show localsCount) ++ "\n"
         start = startState $ mapToConsequent locals
         (instr, maxD) = evalState (runCodegen (compile prog)) start
-        stackDepth = maxD + 1 -- for Stream on stack
+        stackDepth = maxD + 1 -- for PrintStream on stack
         stackLine = ".limit stack " ++ (show stackDepth) ++ "\n"
     in firstLine ++ beginFile ++ localsLine ++ stackLine ++ instr ++ endFile
