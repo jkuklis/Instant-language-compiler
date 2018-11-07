@@ -1,0 +1,29 @@
+#!/bin/bash
+
+filePath=$1
+
+fileDir=$(dirname "${filePath}")
+
+if [ -z "$fileDir" ]; then
+    
+    fileDir = "."
+
+fi
+
+fileNameExt=$(basename "${filePath}")
+
+fileName="${fileNameExt%.*}"
+
+build/Compiler LLVM $fileDir $fileName < $filePath
+
+llFile=$fileDir/$fileName.ll
+
+bcFile=$fileDir/$fileName.bc
+
+if [ -f $llFile ]; then
+
+    llvm-as -o $bcFile $llFile
+
+    llvm-link -o $bcFile $bcFile llvm_runtime/runtime.bc
+
+fi
